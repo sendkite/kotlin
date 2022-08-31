@@ -3,7 +3,6 @@ package com.kotlinspring.controller
 import com.kotlinspring.dto.CourseDTO
 import com.kotlinspring.entity.Course
 import com.kotlinspring.service.CourseService
-import com.kotlinspring.service.GreetingService
 import com.kotlinspring.util.courseDTO
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -45,6 +44,45 @@ class CourseControllerUnitTest {
         Assertions.assertTrue {
             savedCourseDTO!!.id != null
         }
+    }
+
+    @Test
+    fun addCourse_validation() {
+        val courseDTO = CourseDTO(null, "", "")
+
+        every { courseServiceMock.addCourse(any()) } returns courseDTO(id = 1)
+
+        val response = webTestClient
+            .post()
+            .uri("/v1/courses")
+            .bodyValue(courseDTO)
+            .exchange() // call endpoint
+            .expectStatus().isBadRequest
+            .expectBody(String::class.java)
+            .returnResult()
+            .responseBody
+
+        Assertions.assertEquals("courseDTO.category must not be blank, courseDTO.name must not be blank", response)
+    }
+
+    @Test
+    fun addCourse_runtimeException() {
+        val courseDTO = CourseDTO(null, "learning kotlin and spring", "songyeon")
+
+        val errorMessage = "Unexpected Error occurred"
+        every { courseServiceMock.addCourse(any()) } throws RuntimeException(errorMessage)
+
+        val response = webTestClient
+            .post()
+            .uri("/v1/courses")
+            .bodyValue(courseDTO)
+            .exchange() // call endpoint
+            .expectStatus().is5xxServerError
+            .expectBody(String::class.java)
+            .returnResult()
+            .responseBody
+
+        Assertions.assertEquals(errorMessage, response)
     }
 
 
